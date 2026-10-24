@@ -1,13 +1,11 @@
-# Exclude frontend HTML from GitHub repository language statistics
-*.html linguist-vendored=true
-*.html linguist-detectable=false
+# Exclude HTML and JSON from GitHub language statistics
+*.html linguist-vendored
+*.html -linguist-detectable
+*.json linguist-vendored
+*.json -linguist-detectable
+*.tf linguist-vendored
+*.tf -linguist-detectable
 
-# Exclude JSON workflows and Terraform configs from language stats
-*.json linguist-vendored=true
-*.json linguist-detectable=false
-*.tf linguist-vendored=true
-*.tf linguist-detectable=false
-
-# Prioritize Python and Docker
-*.py linguist-detectable=true
-Dockerfile linguist-detectable=true
+# Prioritize Python and Dockerfile in repository language stats
+*.py linguist-detectable
+Dockerfile linguist-detectable
