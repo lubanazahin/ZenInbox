@@ -1,4 +1,4 @@
-# 🌿 ZenInbox — Local, Privacy-First Email De-Escalation Agent
+ ZenInbox — Local, Privacy-First Email De-Escalation Agent
 
 > **Turn angry, demanding emails into calm, actionable summaries and ready-to-send polite reply drafts.**
 
@@ -6,18 +6,18 @@ ZenInbox is a local-first email triage assistant designed to eliminate email str
 
 ---
 
-## ✨ Features
+##  Features
 
-- **🌿 Stress-Neutralized Summaries**: Filters out emotional venting, passive-aggressive corporate jargon (*"per my last email"*), and panic words (*"ASAP"*, *"drop everything"*), presenting only the factual, calm core ask.
-- **✍️ Instant Suggested Reply Drafts**: Automatically generates polite, firm, and boundary-respecting responses ready for one-click copy or dispatch. Includes tone switchers (*Polite & Firm*, *Short*, *Friendly*).
-- **📬 Gmail-Style Aesthetic**: Clean, responsive layout with side navigation, pill search bar, email list view, and a 3-section reading pane.
-- **🔒 Privacy-First & Local Datastore**: Uses local SQLite in WAL mode; email contents and credentials never leave your machine unless connected to your own configured AI models.
-- **🤖 n8n & Ollama Ready**: Native support for n8n LangChain orchestration workflows and local Gemma 2 / Llama 3 via Ollama.
-- **⚡ Inbound Simulator**: Built-in test console to simulate angry boss emails, invoice disasters, and legal notices with live de-escalation preview.
+-Stress-Neutralized Summaries**: Filters out emotional venting, passive-aggressive corporate jargon (*"per my last email"*), and panic words (*"ASAP"*, *"drop everything"*), presenting only the factual, calm core ask.
+Instant Suggested Reply Drafts**: Automatically generates polite, firm, and boundary-respecting responses ready for one-click copy or dispatch. Includes tone switchers (*Polite & Firm*, *Short*, *Friendly*).
+ Gmail-Style Aesthetic**: Clean, responsive layout with side navigation, pill search bar, email list view, and a 3-section reading pane.
+ Privacy-First & Local Datastore**: Uses local SQLite in WAL mode; email contents and credentials never leave your machine unless connected to your own configured AI models.
+ n8n & Ollama Ready**: Native support for n8n LangChain orchestration workflows and local Gemma 2 / Llama 3 via Ollama.
+ Inbound Simulator**: Built-in test console to simulate angry boss emails, invoice disasters, and legal notices with live de-escalation preview.
 
 ---
 
-## 🚀 Quick Start
+Quick Start
 
 ### 1. Clone & Setup
 ```bash
@@ -41,7 +41,7 @@ Open your browser at **[http://localhost:8000](http://localhost:8000)**.
 
 ---
 
-## 🛠️ Tech Stack
+ Tech Stack
 
 - **Backend**: FastAPI, Python 3.10+, SQLite (WAL Mode), imaplib (SSL)
 - **Frontend**: Vanilla JavaScript, Tailwind CSS (CDN), Google Sans typography
