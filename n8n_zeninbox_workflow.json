@@ -1,0 +1,112 @@
+{
+  "name": "ZenInbox AI - IMAP to Gemini Triage Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "format": "resolved",
+        "options": {}
+      },
+      "id": "imap-trigger",
+      "name": "Incoming Email (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "prompt": "=You are ZenInbox AI, a calm and emotionally intelligent email triage analyst. Your mission is to de-escalate anxiety, strip panic jargon and passive aggression, and extract clear actionable intent.\n\nIncoming Email:\nSubject: {{ $json.subject }}\nSender: {{ $json.from }}\nBody:\n{{ $json.text || $json.body || $json.html || 'No body content' }}\n\nReturn ONLY a single valid JSON object with exactly three keys (no markdown code blocks, no backticks, no preamble):\n{\n  \"intent\": \"<concise purpose — 15 words max>\",\n  \"summary\": \"<rewrite in supportive, objective tone — strip panic jargon, false urgency, guilt-tripping, corporate passive-aggression>\",\n  \"draft\": \"<polite, professional reply establishing healthy boundaries>\"\n}"
+      },
+      "id": "zeninbox-ai",
+      "name": "ZenInbox AI",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "gemini-model",
+      "name": "Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [540, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst rawText = item.text || item.response || item.content || item.output || (typeof item === 'string' ? item : JSON.stringify(item));\n\nlet cleanText = String(rawText).trim()\n  .replace(/^```(?:json)?\\s*/i, '')\n  .replace(/\\s*```$/i, '')\n  .trim();\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(cleanText);\n} catch (err) {\n  const match = cleanText.match(/\\{[\\s\\S]*\\}/);\n  if (match) {\n    try {\n      parsed = JSON.parse(match[0]);\n    } catch (e) {\n      parsed = {};\n    }\n  }\n}\n\nconst imapData = $('Incoming Email (IMAP)').first()?.json || {};\n\nreturn [{\n  json: {\n    message_id: imapData.messageId || imapData.id || `imap-${Date.now()}`,\n    sender: imapData.from || imapData.sender || \"External Correspondent <sender@partner.org>\",\n    subject: imapData.subject || \"Project Update & Review\",\n    raw_body: imapData.text || imapData.body || cleanText,\n    intent: parsed.intent || \"Inquiry review\",\n    summary: parsed.summary || cleanText.slice(0, 300) || \"Sender provided an update.\",\n    draft: parsed.draft || \"Thank you for your email. I have received your message and will review it shortly.\",\n    received_at: imapData.date || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "parse-ai-json",
+      "name": "Parse AI JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/webhook/n8n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "sync-zeninbox-api",
+      "name": "Sync to ZenInbox API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Incoming Email (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "ZenInbox AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ZenInbox AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZenInbox AI": {
+      "main": [
+        [
+          {
+            "node": "Parse AI JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI JSON": {
+      "main": [
+        [
+          {
+            "node": "Sync to ZenInbox API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

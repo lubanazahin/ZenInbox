@@ -1,0 +1,29 @@
+# Databases (Strictly keep private mailbox data local)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Temporary and local test outputs
+*.log
+streamlit_*.txt
+*.png
+.DS_Store
+Thumbs.db

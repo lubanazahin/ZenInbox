@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # ===========================================================================
+  # ZenInbox Engine & Triage UI
+  # ===========================================================================
+  zeninbox-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zeninbox-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ZENINBOX_DB=/app/data/zen_inbox.db
+      - ZENINBOX_MODEL=gemma2:2b
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    volumes:
+      - zeninbox_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - zeninbox-net
+
+  # ===========================================================================
+  # n8n Workflow Automation Engine
+  # ===========================================================================
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: zeninbox-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=UTC
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+    volumes:
+      - n8n_data:/home/node/.n8n
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - zeninbox-net
+    depends_on:
+      - zeninbox-app
+
+volumes:
+  zeninbox_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+networks:
+  zeninbox-net:
+    driver: bridge

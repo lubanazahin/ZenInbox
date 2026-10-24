@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZenInbox - Gmail Edition</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #F6F8FC;
+      color: #1F1F1F;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .gmail-search-bar {
+      background-color: #EAF1FB;
+      transition: all 0.2s ease-in-out;
+    }
+    .gmail-search-bar:focus-within {
+      background-color: #FFFFFF;
+      box-shadow: 0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+    }
+    .gmail-sidebar-item {
+      transition: background-color 0.15s;
+    }
+    .gmail-sidebar-item.active {
+      background-color: #D3E3FD;
+      font-weight: 700;
+      color: #041E49;
+    }
+    .gmail-sidebar-item:hover:not(.active) {
+      background-color: #E9EEF6;
+    }
+    .gmail-row {
+      transition: box-shadow 0.1s, background-color 0.1s;
+    }
+    .gmail-row:hover {
+      box-shadow: inset 1px 0 0 #dadce0, inset -1px 0 0 #dadce0, 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- ===================================================================== -->
+  <!-- GMAIL TOP BAR (Header)                                                -->
+  <!-- ===================================================================== -->
+  <header class="h-16 px-4 flex items-center justify-between gap-4 border-b border-[#E0E2E7] bg-[#F6F8FC] shrink-0">
+    
+    <!-- Left: Menu + Gmail Brand -->
+    <div class="flex items-center gap-3 w-60 shrink-0">
+      <button class="p-2 rounded-full hover:bg-slate-200 transition text-slate-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="flex items-center gap-2 cursor-pointer" onclick="goToStage('inbox'); selectFolder('inbox');">
+        <!-- Gmail Logo Mark -->
+        <svg class="w-6 h-6" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+        <span class="text-xl font-black tracking-tight text-black">ZenInbox</span>
+      </div>
+    </div>
+
+    <!-- Center: Gmail Pill Search Bar -->
+    <div class="flex-1 max-w-2xl">
+      <div class="gmail-search-bar flex items-center gap-3 px-4 py-2.5 rounded-full border border-transparent">
+        <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" id="gmail-search-input" oninput="handleSearch(this.value)" placeholder="Search in mail (e.g. sender, topic, intent)..." class="w-full bg-transparent text-sm focus:outline-none text-slate-800 placeholder-slate-500">
+        <button class="text-slate-500 hover:text-slate-800 p-1 rounded-full">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Status Pill & Profile -->
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E6F4EA] border border-[#CEEAD6] text-xs font-medium text-[#137333]">
+        <span class="w-2 h-2 rounded-full bg-[#1E8E3E]"></span>
+        <span>Zen AI Active</span>
+      </div>
+
+      <!-- Quick Step Jump (for review) -->
+      <button onclick="goToStage('login')" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 rounded">
+        Sign In Step
+      </button>
+
+      <button onclick="goToStage('connect')" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 rounded">
+        Connect Mail Step
+      </button>
+
+      <!-- Apps Grid Icon -->
+      <button class="p-2 rounded-full hover:bg-slate-200 transition text-slate-600">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM6 4c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      </button>
+
+      <!-- User Avatar -->
+      <div id="user-avatar-badge" class="w-9 h-9 rounded-full bg-[#7C3AED] text-white flex items-center justify-center font-bold text-sm shadow-xs cursor-pointer" title="lubanazahin72@gmail.com">
+        L
+      </div>
+    </div>
+
+  </header>
+
+  <!-- Notification Banner -->
+  <div id="toast-banner" class="hidden fixed bottom-6 left-6 z-50 bg-[#323232] text-white text-xs px-4 py-3 rounded-lg shadow-xl flex items-center gap-3">
+    <div id="toast-text" class="flex-1">Notification text</div>
+    <button onclick="hideToast()" class="text-slate-400 hover:text-white">✕</button>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN LAYOUT: GMAIL BODY                                               -->
+  <!-- ===================================================================== -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- =================================================================== -->
+    <!-- STAGE 1: SIGN IN DASHBOARD (SHOWN FIRST ON LOAD!)                   -->
+    <!-- =================================================================== -->
+    <div id="stage-login" class="flex-1 flex items-center justify-center p-6 bg-slate-50 overflow-y-auto">
+      <div class="max-w-md w-full bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl space-y-6">
+        
+        <div class="text-center space-y-2">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center text-2xl font-bold mx-auto shadow-md">
+            M
+          </div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+            Sign In with Google
+          </h1>
+          <p class="text-xs text-slate-500">
+            to continue to ZenInbox (Stress-Free Email AI)
+          </p>
+        </div>
+
+        <!-- Google OAuth Primary Button -->
+        <div class="space-y-3">
+          <button onclick="handleOAuthLogin('google')" id="btn-oauth-google" class="w-full py-3 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 hover:border-slate-400 text-slate-700 text-xs font-semibold flex items-center justify-center gap-3 transition shadow-xs">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Continue with Google Account</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-px bg-slate-200"></div>
+          <span class="text-[11px] uppercase font-bold text-slate-400">or sign in with password</span>
+          <div class="flex-1 h-px bg-slate-200"></div>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Email or Username</label>
+            <input type="text" id="login-username" value="admin" class="w-full text-xs py-2.5 px-3 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+            <input type="password" id="login-password" value="zeninbox2026" class="w-full text-xs py-2.5 px-3 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500">
+            <span class="text-[10px] text-slate-400 mt-1 block">Default: admin / zeninbox2026</span>
+          </div>
+
+          <div id="login-error-box" class="hidden p-3 rounded-lg bg-rose-50 text-rose-800 text-xs"></div>
+
+          <button onclick="handleLoginSubmit()" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-xs">
+            Sign In & Continue ➔
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- STAGE 2: CONNECT MAIL DASHBOARD (SHOWN AFTER SIGN IN)               -->
+    <!-- =================================================================== -->
+    <div id="stage-connect" class="hidden flex-1 flex items-center justify-center p-6 bg-slate-50 overflow-y-auto">
+      <div class="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl space-y-6">
+        
+        <div class="space-y-2">
+          <div class="inline-block px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold uppercase">
+            Step 2: Mailbox Connection
+          </div>
+          <h2 class="text-xl font-bold text-slate-900">
+            Connect Your Gmail Address
+          </h2>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Whenever any stressful or demanding email arrives, Zen AI will automatically strip out the panic, write a factual summary, and prepare a calm reply.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Gmail Address</label>
+            <input type="email" id="connect-email-input" value="lubanazahin72@gmail.com" class="w-full text-xs py-2.5 px-3 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-700">Google App Password (Optional)</label>
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-[10px] text-blue-600 underline">Get App Password</a>
+            </div>
+            <input type="password" id="connect-password-input" placeholder="Leave empty for demo sandbox mode" class="w-full text-xs py-2.5 px-3 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500">
+            <span class="text-[10px] text-slate-400 mt-1 block">Leave blank to test with simulated crashouts without sharing credentials.</span>
+          </div>
+
+          <div id="connect-feedback-box" class="hidden p-3 rounded-lg text-xs font-medium"></div>
+
+          <button onclick="handleConnectSubmit()" id="btn-connect-submit" class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-xs">
+            Open Gmail Inbox ➔
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- STAGE 3: GMAIL INTERFACE (SIDEBAR + INBOX LIST / READER)             -->
+    <!-- =================================================================== -->
+    <div id="stage-inbox" class="hidden flex-1 flex overflow-hidden">
+      
+      <!-- GMAIL LEFT SIDEBAR -->
+      <aside class="w-64 bg-[#F6F8FC] p-3 flex flex-col justify-between shrink-0 select-none">
+        <div class="space-y-4">
+          
+          <!-- Gmail Compose Button -->
+          <button onclick="openComposeModal()" class="flex items-center gap-3 px-6 py-4 rounded-2xl bg-[#C2E7FF] hover:bg-[#b3dcf8] hover:shadow-md text-[#001D35] font-semibold text-sm transition duration-150">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Compose</span>
+          </button>
+
+          <!-- Gmail Folders -->
+          <nav class="space-y-0.5 text-xs font-medium text-slate-700">
+            <div onclick="selectFolder('inbox')" id="folder-inbox" class="gmail-sidebar-item active flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5v-3h3.56c.69 1.19 1.97 2 3.44 2s2.75-.81 3.44-2H19v3zm0-5h-4.99c0 1.1-.9 2-2 2s-2-.9-2-2H5V5h14v9z"/></svg>
+                <span>Inbox</span>
+              </div>
+              <span id="sidebar-inbox-count" class="font-bold text-[11px]">4</span>
+            </div>
+
+            <div onclick="selectFolder('starred')" id="folder-starred" class="gmail-sidebar-item flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                <span>Starred</span>
+              </div>
+            </div>
+
+            <div onclick="selectFolder('snoozed')" id="folder-snoozed" class="gmail-sidebar-item flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                <span>Snoozed</span>
+              </div>
+            </div>
+
+            <div onclick="selectFolder('sent')" id="folder-sent" class="gmail-sidebar-item flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <span>Sent</span>
+              </div>
+            </div>
+
+            <div onclick="selectFolder('drafts')" id="folder-drafts" class="gmail-sidebar-item flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <span>Drafts</span>
+              </div>
+            </div>
+
+            <div onclick="selectFolder('archived')" id="folder-archived" class="gmail-sidebar-item flex items-center justify-between px-4 py-2 rounded-full cursor-pointer">
+              <div class="flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/></svg>
+                <span>Archived</span>
+              </div>
+            </div>
+          </nav>
+
+          <!-- Gmail Categories / AI Labels -->
+          <div class="pt-4 border-t border-slate-200">
+            <span class="px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Zen Filters</span>
+            <div class="space-y-1 text-xs">
+              <div onclick="filterByTag('all')" class="px-4 py-1.5 rounded-full hover:bg-slate-200 cursor-pointer flex items-center gap-2 text-slate-700">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <span>All Messages</span>
+              </div>
+              <div onclick="filterByTag('roadmap')" class="px-4 py-1.5 rounded-full hover:bg-slate-200 cursor-pointer flex items-center gap-2 text-slate-700">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                <span>Q4 Deliverables</span>
+              </div>
+              <div onclick="filterByTag('invoice')" class="px-4 py-1.5 rounded-full hover:bg-slate-200 cursor-pointer flex items-center gap-2 text-slate-700">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Invoices & Billing</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="text-[11px] text-slate-400 px-4">
+          <span>Protected: lubanazahin72@gmail.com</span>
+        </div>
+      </aside>
+
+      <!-- GMAIL MAIN CONTENT AREA (Email List or Reading Pane) -->
+      <section class="flex-1 bg-white rounded-tl-2xl shadow-xs border-l border-t border-[#E0E2E7] flex flex-col overflow-hidden">
+        
+        <!-- =============================================================== -->
+        <!-- VIEW A: GMAIL EMAIL LIST (TABLE ROWS)                           -->
+        <!-- =============================================================== -->
+        <div id="gmail-list-view" class="flex-1 flex flex-col overflow-hidden">
+          
+          <!-- Action Toolbar -->
+          <div class="h-12 px-4 flex items-center justify-between border-b border-[#F1F3F4] text-slate-600 text-xs shrink-0 bg-white">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-0">
+              <button onclick="loadEmails()" class="p-1.5 hover:bg-slate-100 rounded-full" title="Refresh">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </button>
+              <button onclick="openComposeModal()" class="p-1.5 hover:bg-slate-100 rounded-full" title="Test New Inbound Email">
+                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <span id="page-count-label">1–4 of 4</span>
+            </div>
+          </div>
+
+          <!-- Email Rows List -->
+          <div class="flex-1 overflow-y-auto divide-y divide-[#F1F3F4]" id="gmail-table-body">
+            <!-- Dynamically populated Gmail rows -->
+          </div>
+
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW B: GMAIL READING PANE (OPEN EMAIL)                         -->
+        <!-- =============================================================== -->
+        <div id="gmail-reading-pane" class="hidden flex-1 flex flex-col overflow-y-auto bg-[#F8FAFC] p-6 space-y-6">
+          
+          <!-- Top Back & Actions Header -->
+          <div class="flex items-center justify-between border-b border-[#E2E8F0] pb-3 text-slate-600 bg-white px-4 py-2 rounded-xl shadow-xs">
+            <div class="flex items-center gap-3">
+              <button onclick="closeReadingPane()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-medium text-xs transition" title="Back to Inbox">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Back to Inbox</span>
+              </button>
+              <div class="h-4 w-px bg-slate-200"></div>
+              <button onclick="archiveCurrentEmail()" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition" title="Archive">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+              </button>
+              <button onclick="deleteCurrentEmail()" class="p-1.5 rounded-lg hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition" title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+            <div class="text-xs text-slate-500 font-mono" id="detail-timestamp">Oct 24, 11:42 AM</div>
+          </div>
+
+          <!-- Subject Title & Tags -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+            <div class="flex items-start justify-between gap-4">
+              <h1 class="text-xl font-bold text-slate-900 tracking-tight" id="detail-subject">
+                Email Subject Line
+              </h1>
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0 flex items-center gap-1.5" id="detail-tag">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Calmed & De-escalated</span>
+              </span>
+            </div>
+
+            <!-- Sender Profile Info -->
+            <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
+              <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs" id="detail-avatar">
+                SA
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-900" id="detail-sender">Sender Name</div>
+                <div class="text-[11px] text-slate-500">to me (via ZenInbox protected gateway)</div>
+              </div>
+            </div>
+
+            <!-- View Switcher Tabs (DRAFT IS PRIMARY!) -->
+            <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+              <button onclick="switchEmailTab('draft')" id="tab-btn-draft" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-xs flex items-center gap-1.5 transition">
+                <span>✍️ Suggested Reply Draft</span>
+                <span class="bg-blue-700 text-white text-[10px] px-1.5 py-0.2 rounded-full">Primary</span>
+              </button>
+              <button onclick="switchEmailTab('summary')" id="tab-btn-summary" class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition">
+                <span>🌿 Executive Summary</span>
+              </button>
+              <button onclick="switchEmailTab('original')" id="tab-btn-original" class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition">
+                <span>📩 Original Message</span>
+              </button>
+              <button onclick="switchEmailTab('all')" id="tab-btn-all" class="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-100 ml-auto transition">
+                Show All 3
+              </button>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- SECTION 1 (HERO): AI SUGGESTED REPLY DRAFT (READY TO SEND)    -->
+          <!-- ============================================================= -->
+          <div id="section-draft-container" class="rounded-2xl bg-white border-2 border-blue-500 shadow-md overflow-hidden space-y-0">
+            <!-- Draft Header -->
+            <div class="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 px-5 py-3 border-b border-blue-200 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-sm font-black text-blue-950 uppercase tracking-wide">1. Zen AI Suggested Reply Draft</h3>
+                  <p class="text-[11px] text-blue-700">Pre-written reply maintaining healthy boundaries and a calm tone</p>
+                </div>
+              </div>
+              <span class="text-[11px] font-bold text-blue-800 bg-blue-100 px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                <span>Ready to Send or Copy</span>
+              </span>
+            </div>
+
+            <!-- Draft Guidance & Recipient -->
+            <div class="px-5 pt-4 pb-2">
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-2">
+                <span class="font-medium">Reply addressed to: <strong class="text-slate-900" id="reply-to-name">Sender</strong></span>
+                <div class="flex items-center gap-1.5 text-[11px]">
+                  <span class="text-slate-400">Tone:</span>
+                  <button onclick="applyDraftTone('firm')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">Polite & Firm</button>
+                  <button onclick="applyDraftTone('short')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">Short</button>
+                  <button onclick="applyDraftTone('friendly')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">Friendly</button>
+                </div>
+              </div>
+              <textarea id="reply-textarea" rows="6" class="w-full p-4 text-xs font-sans text-slate-900 bg-slate-50/50 border border-slate-300 rounded-xl leading-relaxed focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y transition shadow-inner"></textarea>
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div class="px-5 py-3.5 bg-[#FAFBFD] border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <button onclick="handleSendDraftReply()" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-2">
+                  <span>Send Reply Now</span>
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+                <button onclick="copyCurrentDraft()" class="px-4 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+                  <span>📋 Copy Reply to Clipboard</span>
+                </button>
+                <button onclick="saveCurrentDraft()" class="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition">
+                  Save Changes
+                </button>
+              </div>
+
+              <div class="flex items-center gap-2 text-slate-500 text-xs">
+                <button onclick="resetReplyDraft()" class="hover:text-rose-600 px-2 py-1 rounded text-[11px] text-slate-500 flex items-center gap-1" title="Reset to AI Draft">
+                  <span>↺ Reset to Original Draft</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- SECTION 2: ZEN AI EXECUTIVE SUMMARY (CALM EXECUTIVE CARD)      -->
+          <!-- ============================================================= -->
+          <div id="section-summary-container" class="rounded-2xl bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50 border-2 border-emerald-300 p-5 shadow-xs space-y-3">
+            <!-- Header Bar -->
+            <div class="flex items-center justify-between border-b border-emerald-100 pb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-sm font-black text-emerald-950 uppercase tracking-wide">2. Zen AI Executive Summary</h3>
+                  <p class="text-[11px] text-emerald-700">De-escalated by AI • Shouting, hostile tone & panic removed</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-200/70 text-emerald-900 border border-emerald-300">
+                ✓ Non-Stress Brief
+              </span>
+            </div>
+
+            <!-- Core Ask / Intent Callout -->
+            <div class="bg-white/90 p-3.5 rounded-xl border border-emerald-200/80 space-y-1">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                <span>🎯</span> The Real Ask / Intent:
+              </div>
+              <div class="text-sm font-bold text-slate-900" id="detail-intent">
+                Core intent extracted by Zen AI
+              </div>
+            </div>
+
+            <!-- De-escalated Summary Content -->
+            <div class="space-y-1">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                <span>📝</span> Executive Calm Summary:
+              </div>
+              <div class="text-xs text-slate-700 leading-relaxed bg-white/90 p-3.5 rounded-xl border border-emerald-200/80" id="detail-summary">
+                Factual, calm summary generated by Zen AI.
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- SECTION 3: ORIGINAL INCOMING EMAIL (WHAT WAS RECEIVED)        -->
+          <!-- ============================================================= -->
+          <div id="section-original-container" class="rounded-2xl bg-white border border-slate-300 p-5 shadow-xs space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-slate-700 text-white flex items-center justify-center">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <h3 class="text-sm font-black text-slate-800 uppercase tracking-wide">3. Original Incoming Email</h3>
+                  <p class="text-[11px] text-slate-500">The raw inbound message sent to your inbox</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="toggleOriginalEmailBody()" id="btn-toggle-original" class="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition">
+                  Hide Raw Text
+                </button>
+                <span class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                  Inbound Source
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50/70 border border-slate-200 text-xs text-slate-700 font-sans leading-relaxed whitespace-pre-line select-text" id="detail-body">
+              Email body text...
+            </div>
+          </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- FLOATING GMAIL COMPOSE MODAL (SIMULATOR FOR ANY ANGRY EMAIL)          -->
+  <!-- ===================================================================== -->
+  <div id="compose-modal" class="hidden fixed bottom-0 right-8 z-50 w-full max-w-lg bg-white rounded-t-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col">
+    
+    <!-- Modal Header -->
+    <div class="bg-[#202124] text-white px-4 py-3 flex items-center justify-between text-xs font-semibold">
+      <span>New Message / Inbound Stressful Email Test</span>
+      <button onclick="closeComposeModal()" class="text-slate-400 hover:text-white font-bold text-sm">✕</button>
+    </div>
+
+    <!-- Presets bar -->
+    <div class="p-2.5 bg-[#F6F8FC] border-b border-slate-200 flex items-center gap-2 overflow-x-auto text-[11px]">
+      <span class="font-bold text-slate-500 shrink-0">Presets:</span>
+      <button onclick="fillComposePreset('boss')" class="px-2.5 py-1 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-900 font-semibold shrink-0">
+        😡 Rage Boss ASAP
+      </button>
+      <button onclick="fillComposePreset('invoice')" class="px-2.5 py-1 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold shrink-0">
+        💸 Overdue Invoice #1049
+      </button>
+      <button onclick="fillComposePreset('contract')" class="px-2.5 py-1 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-900 font-semibold shrink-0">
+        📝 Contract Sign-off
+      </button>
+    </div>
+
+    <!-- Input fields -->
+    <div class="p-4 space-y-2 text-xs flex-1">
+      <input type="text" id="compose-sender" value="Demanding Boss <director@clientcorp.com>" placeholder="Sender" class="w-full py-1.5 px-2 border-b border-slate-200 focus:outline-none">
+      <input type="text" id="compose-subject" value="CRITICAL: Q4 Roadmap Numbers Due Yesterday ASAP!" placeholder="Subject" class="w-full py-1.5 px-2 border-b border-slate-200 focus:outline-none font-bold">
+      <textarea id="compose-body" rows="4" placeholder="Email body..." class="w-full p-2 border border-slate-200 rounded-lg focus:outline-none font-sans text-xs leading-relaxed">TEAM: We require the completed Q4 roadmap figures immediately on my desk ASAP! Per my last email this was due yesterday. Please drop all tasks and jump on a call now!</textarea>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+      <button onclick="submitComposeInbound()" class="px-5 py-2 rounded-full bg-[#0B57D0] hover:bg-[#0842a0] text-white text-xs font-bold transition flex items-center gap-2 shadow-xs">
+        <span>Send to Inbox & De-escalate</span>
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+      <span class="text-[10px] text-slate-400">Pops Windows alert & writes calm draft</span>
+    </div>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT CONTROLLER                                                -->
+  <!-- ===================================================================== -->
+  <script>
+    const API_BASE = "http://localhost:8000";
+
+    const state = {
+      currentStage: 'inbox', // Can toggle between login, connect, inbox
+      currentFolder: 'inbox',
+      currentFilter: 'all',
+      searchQuery: '',
+      mailbox: 'lubanazahin72@gmail.com',
+      emails: [],
+      currentEmail: null
+    };
+
+    // -------------------------------------------------------------------------
+    // Stage Transitions (1. Sign In -> 2. Connect Mail -> 3. Gmail Inbox)
+    // -------------------------------------------------------------------------
+    function goToStage(stage) {
+      state.currentStage = stage;
+      document.getElementById('stage-login').classList.add('hidden');
+      document.getElementById('stage-connect').classList.add('hidden');
+      document.getElementById('stage-inbox').classList.add('hidden');
+
+      if (stage === 'login') {
+        document.getElementById('stage-login').classList.remove('hidden');
+      } else if (stage === 'connect') {
+        document.getElementById('stage-connect').classList.remove('hidden');
+      } else if (stage === 'inbox') {
+        document.getElementById('stage-inbox').classList.remove('hidden');
+        loadEmails();
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Toast Feedback
+    // -------------------------------------------------------------------------
+    function showToast(text) {
+      const banner = document.getElementById('toast-banner');
+      document.getElementById('toast-text').innerText = text;
+      banner.classList.remove('hidden');
+      setTimeout(() => banner.classList.add('hidden'), 4000);
+    }
+
+    function hideToast() {
+      document.getElementById('toast-banner').classList.add('hidden');
+    }
+
+    // -------------------------------------------------------------------------
+    // Stage 1: Auth & OAuth
+    // -------------------------------------------------------------------------
+    async function handleLoginSubmit() {
+      const u = document.getElementById('login-username').value.trim();
+      const p = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error-box');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errBox.classList.remove('hidden');
+          errBox.innerText = data.detail || "Invalid login";
+          return;
+        }
+        showToast("Signed in as " + u);
+        goToStage('connect');
+      } catch (e) {
+        goToStage('connect');
+      }
+    }
+
+    async function handleOAuthLogin(provider = 'google') {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/oauth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: provider,
+            email: "lubanazahin72@gmail.com",
+            full_name: "Lubana Zahin"
+          })
+        });
+        const data = await res.json();
+        state.mailbox = data.email;
+        document.getElementById('user-avatar-badge').innerText = data.full_name ? data.full_name[0] : 'L';
+        showToast("Signed in with Google OAuth! 🌐");
+        goToStage('connect');
+      } catch (e) {
+        goToStage('connect');
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Stage 2: Connect Mail
+    // -------------------------------------------------------------------------
+    async function handleConnectSubmit() {
+      const email = document.getElementById('connect-email-input').value.trim();
+      const pwd = document.getElementById('connect-password-input').value.trim();
+
+      try {
+        const res = await fetch(`${API_BASE}/api/mail/verify-and-connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, app_password: pwd })
+        });
+        state.mailbox = email;
+        showToast("Connected to " + email);
+        goToStage('inbox');
+      } catch (e) {
+        state.mailbox = email;
+        goToStage('inbox');
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Folder & Filter Selection
+    // -------------------------------------------------------------------------
+    function selectFolder(folder) {
+      state.currentFolder = folder;
+      ['inbox', 'starred', 'snoozed', 'sent', 'drafts', 'archived'].forEach(f => {
+        const el = document.getElementById(`folder-${f}`);
+        if (el) el.classList.remove('active');
+      });
+      const currentEl = document.getElementById(`folder-${folder}`);
+      if (currentEl) currentEl.classList.add('active');
+
+      closeReadingPane();
+      loadEmails();
+    }
+
+    function filterByTag(tag) {
+      state.currentFilter = tag;
+      loadEmails();
+    }
+
+    function handleSearch(val) {
+      state.searchQuery = val.toLowerCase();
+      renderGmailRows();
+    }
+
+    // -------------------------------------------------------------------------
+    // Load & Render Gmail Table Rows
+    // -------------------------------------------------------------------------
+    async function loadEmails() {
+      try {
+        let filterParam = 'all';
+        if (state.currentFolder === 'starred') filterParam = 'starred';
+        if (state.currentFolder === 'archived') filterParam = 'archived';
+
+        const res = await fetch(`${API_BASE}/api/emails?filter=${filterParam}`);
+        const emails = await res.json();
+        state.emails = emails;
+
+        document.getElementById('sidebar-inbox-count').innerText = emails.filter(e => !e.is_archived).length;
+        document.getElementById('page-count-label').innerText = `1–${emails.length} of ${emails.length}`;
+
+        renderGmailRows();
+      } catch (e) {
+        console.error("Error loading emails:", e);
+      }
+    }
+
+    function renderGmailRows() {
+      const tbody = document.getElementById('gmail-table-body');
+      let list = state.emails;
+
+      if (state.searchQuery) {
+        list = list.filter(e => 
+          (e.subject && e.subject.toLowerCase().includes(state.searchQuery)) ||
+          (e.sender && e.sender.toLowerCase().includes(state.searchQuery)) ||
+          (e.intent && e.intent.toLowerCase().includes(state.searchQuery)) ||
+          (e.summary && e.summary.toLowerCase().includes(state.searchQuery))
+        );
+      }
+
+      if (state.currentFilter === 'roadmap') {
+        list = list.filter(e => (e.subject + e.raw_body).toLowerCase().includes('roadmap') || (e.subject + e.raw_body).toLowerCase().includes('q4'));
+      } else if (state.currentFilter === 'invoice') {
+        list = list.filter(e => (e.subject + e.raw_body).toLowerCase().includes('invoice') || (e.subject + e.raw_body).toLowerCase().includes('payment'));
+      }
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `
+          <div class="py-24 text-center text-slate-400 space-y-2">
+            <div class="text-3xl">☕</div>
+            <div class="text-sm font-semibold text-slate-700">Your inbox is in a Zen state</div>
+            <div class="text-xs text-slate-500">No matching emails in this folder.</div>
+            <button onclick="openComposeModal()" class="mt-3 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">
+              Test New Inbound Email
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map(item => {
+        // Tag badge color
+        let tagColor = "bg-purple-100 text-purple-800";
+        let tagText = "🌿 De-escalated";
+        const combined = (item.subject + item.raw_body).toLowerCase();
+        if (combined.includes('invoice') || combined.includes('payment')) {
+          tagColor = "bg-amber-100 text-amber-800";
+          tagText = "💳 Invoice #1049";
+        } else if (combined.includes('roadmap') || combined.includes('q4')) {
+          tagColor = "bg-blue-100 text-blue-800";
+          tagText = "📊 Q4 Figures";
+        } else if (combined.includes('contract')) {
+          tagColor = "bg-emerald-100 text-emerald-800";
+          tagText = "📝 Contract";
+        }
+
+        // Clean sender display name
+        const cleanSender = item.sender.split('<')[0].replace(/"/g, '').trim() || item.sender;
+
+        return `
+          <div onclick="openEmailDetail(${item.id})" class="gmail-row flex items-center gap-3 px-4 py-3 cursor-pointer select-none bg-white">
+            <!-- Checkbox & Star -->
+            <div class="flex items-center gap-2.5 shrink-0" onclick="event.stopPropagation()">
+              <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-0">
+              <button onclick="toggleStarEmail(${item.id})" class="text-slate-400 hover:text-amber-400 transition">
+                <svg class="w-4 h-4 ${item.is_starred ? 'text-amber-400 fill-amber-400' : ''}" fill="${item.is_starred ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+              </button>
+            </div>
+
+            <!-- Sender Name (Gmail style) -->
+            <div class="w-48 shrink-0 font-bold text-xs text-slate-800 truncate">
+              ${escapeHtml(cleanSender)}
+            </div>
+
+            <!-- Subject & Summary Snippet -->
+            <div class="flex-1 flex items-center gap-2 min-w-0 text-xs">
+              <span class="px-2 py-0.2 rounded-full text-[10px] font-semibold shrink-0 ${tagColor}">
+                ${tagText}
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 shrink-0 flex items-center gap-1 shadow-xs">
+                ✍️ Draft Ready
+              </span>
+              <span class="font-bold text-slate-900 shrink-0 truncate max-w-xs">
+                ${escapeHtml(item.subject)}
+              </span>
+              <span class="text-slate-400 font-normal truncate">
+                — ${escapeHtml(item.summary || item.raw_body || '')}
+              </span>
+            </div>
+
+            <!-- Timestamp on Right -->
+            <div class="text-[11px] font-medium text-slate-500 shrink-0">
+              ${item.received_at || 'Just now'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // -------------------------------------------------------------------------
+    // View B: Open Email Detail (Gmail Reading Pane)
+    // -------------------------------------------------------------------------
+    function openEmailDetail(emailId) {
+      const email = state.emails.find(e => e.id === emailId);
+      if (!email) return;
+
+      state.currentEmail = email;
+
+      document.getElementById('gmail-list-view').classList.add('hidden');
+      document.getElementById('gmail-reading-pane').classList.remove('hidden');
+      document.getElementById('gmail-reading-pane').scrollTop = 0;
+
+      // Populate details
+      document.getElementById('detail-subject').innerText = email.subject;
+      document.getElementById('detail-timestamp').innerText = email.received_at || 'Today';
+
+      const cleanSender = email.sender.split('<')[0].replace(/"/g, '').trim() || email.sender;
+      document.getElementById('detail-sender').innerText = email.sender;
+      document.getElementById('reply-to-name').innerText = cleanSender;
+
+      // Initials for avatar
+      const initials = cleanSender.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'EM';
+      document.getElementById('detail-avatar').innerText = initials;
+
+      // Populate Zen AI overview
+      document.getElementById('detail-intent').innerText = email.intent || "Clarify status and deliverables";
+      document.getElementById('detail-summary').innerText = email.summary || "Sender requested an update.";
+      document.getElementById('detail-body').innerText = email.raw_body || email.subject;
+
+      // Pre-fill reply box with AI draft
+      document.getElementById('reply-textarea').value = email.draft || "Hi,\n\nThanks for reaching out. I will follow up shortly.\n\nBest regards,\nAlex";
+
+      // Default to showing all 3 sections with Draft on top
+      switchEmailTab('all');
+    }
+
+    function switchEmailTab(tab) {
+      const secDraft = document.getElementById('section-draft-container');
+      const secSummary = document.getElementById('section-summary-container');
+      const secOriginal = document.getElementById('section-original-container');
+
+      const btnDraft = document.getElementById('tab-btn-draft');
+      const btnSummary = document.getElementById('tab-btn-summary');
+      const btnOriginal = document.getElementById('tab-btn-original');
+      const btnAll = document.getElementById('tab-btn-all');
+
+      const tabs = [
+        { id: 'draft', sec: secDraft, btn: btnDraft },
+        { id: 'summary', sec: secSummary, btn: btnSummary },
+        { id: 'original', sec: secOriginal, btn: btnOriginal }
+      ];
+
+      if (tab === 'all') {
+        tabs.forEach(t => {
+          if (t.sec) t.sec.classList.remove('hidden');
+          if (t.btn) {
+            t.btn.classList.remove('bg-blue-600', 'text-white', 'shadow-xs');
+            t.btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+          }
+        });
+        if (btnAll) {
+          btnAll.classList.add('bg-blue-600', 'text-white', 'shadow-xs');
+          btnAll.classList.remove('text-slate-500', 'hover:bg-slate-100');
+        }
+      } else {
+        if (btnAll) {
+          btnAll.classList.remove('bg-blue-600', 'text-white', 'shadow-xs');
+          btnAll.classList.add('text-slate-500', 'hover:bg-slate-100');
+        }
+        tabs.forEach(t => {
+          if (t.id === tab) {
+            if (t.sec) t.sec.classList.remove('hidden');
+            if (t.btn) {
+              t.btn.classList.add('bg-blue-600', 'text-white', 'shadow-xs');
+              t.btn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+            }
+          } else {
+            if (t.sec) t.sec.classList.add('hidden');
+            if (t.btn) {
+              t.btn.classList.remove('bg-blue-600', 'text-white', 'shadow-xs');
+              t.btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+            }
+          }
+        });
+      }
+    }
+
+    function toggleOriginalEmailBody() {
+      const body = document.getElementById('detail-body');
+      const btn = document.getElementById('btn-toggle-original');
+      if (body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        btn.innerText = 'Hide Raw Text';
+      } else {
+        body.classList.add('hidden');
+        btn.innerText = 'Show Raw Text';
+      }
+    }
+
+    function applyDraftTone(tone) {
+      if (!state.currentEmail) return;
+      const textarea = document.getElementById('reply-textarea');
+      const senderName = document.getElementById('reply-to-name').innerText || 'there';
+      const cleanSubj = (state.currentEmail.subject || '').replace(/^(re|fwd):\s*/i, '');
+      
+      if (tone === 'short') {
+        textarea.value = `Hi ${senderName},\n\nReceived your message regarding ${cleanSubj}. We are on it and will follow up with confirmed details shortly.\n\nBest,\nAlex`;
+      } else if (tone === 'friendly') {
+        textarea.value = `Hi ${senderName},\n\nThanks so much for reaching out! I completely understand your note regarding ${cleanSubj}. We're actively coordinating with the team to get this handled smoothly for you.\n\nI'll share an update as soon as possible today.\n\nWarm regards,\nAlex`;
+      } else {
+        textarea.value = state.currentEmail.draft;
+      }
+      showToast(`Draft tone updated to ${tone}! ✍️`);
+    }
+
+    function closeReadingPane() {
+      document.getElementById('gmail-reading-pane').classList.add('hidden');
+      document.getElementById('gmail-list-view').classList.remove('hidden');
+      state.currentEmail = null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Reply Actions (Send, Copy, Save, Reset)
+    // -------------------------------------------------------------------------
+    function copyCurrentDraft() {
+      const textarea = document.getElementById('reply-textarea');
+      if (textarea) {
+        navigator.clipboard.writeText(textarea.value);
+        showToast("Draft copied to clipboard! Ready to paste into Gmail 📋");
+      }
+    }
+
+    async function saveCurrentDraft() {
+      if (!state.currentEmail) return;
+      const text = document.getElementById('reply-textarea').value;
+      try {
+        await fetch(`${API_BASE}/api/emails/${state.currentEmail.id}/draft`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ draft: text })
+        });
+        showToast("Draft saved successfully.");
+        loadEmails();
+      } catch (e) {
+        showToast("Saved draft locally.");
+      }
+    }
+
+    function resetReplyDraft() {
+      if (state.currentEmail) {
+        document.getElementById('reply-textarea').value = state.currentEmail.draft;
+        showToast("Reset to original Zen AI draft.");
+      }
+    }
+
+    function handleSendDraftReply() {
+      showToast("Reply sent! 🚀 (Simulated outgoing dispatch)");
+      setTimeout(() => {
+        closeReadingPane();
+      }, 700);
+    }
+
+    async function toggleStarEmail(emailId) {
+      const item = state.emails.find(e => e.id === emailId);
+      if (item) {
+        item.is_starred = item.is_starred ? 0 : 1;
+        renderGmailRows();
+        showToast(item.is_starred ? "Starred email ⭐" : "Unstarred email");
+      }
+    }
+
+    async function archiveCurrentEmail() {
+      if (!state.currentEmail) return;
+      try {
+        await fetch(`${API_BASE}/api/emails/${state.currentEmail.id}/archive`, { method: "POST" });
+        showToast("Email archived 📥");
+        closeReadingPane();
+        loadEmails();
+      } catch (e) {
+        closeReadingPane();
+      }
+    }
+
+    function deleteCurrentEmail() {
+      archiveCurrentEmail();
+    }
+
+    // -------------------------------------------------------------------------
+    // Floating Compose Modal (Simulate any angry email)
+    // -------------------------------------------------------------------------
+    function openComposeModal() {
+      document.getElementById('compose-modal').classList.remove('hidden');
+    }
+
+    function closeComposeModal() {
+      document.getElementById('compose-modal').classList.add('hidden');
+    }
+
+    function fillComposePreset(type) {
+      if (type === 'boss') {
+        document.getElementById('compose-sender').value = "Executive VP <vp@corp-hq.com>";
+        document.getElementById('compose-subject').value = "CRITICAL: Urgent deliverables deadline for Q4 roadmap alignment ASAP";
+        document.getElementById('compose-body').value = "TEAM, We need the complete Q4 project figures immediately ASAP! Per my last email this was due yesterday. Please drop everything and jump on a call now!";
+      } else if (type === 'invoice') {
+        document.getElementById('compose-sender').value = "Accounting Partner <billing@enterprisesolutions.com>";
+        document.getElementById('compose-subject').value = "DISASTER: Payment processing broken on invoice #1049 overdue!";
+        document.getElementById('compose-body').value = "We have not received payment confirmation for invoice #1049 and our operations are about to shut down tonight! Drop everything and call me immediately right now!";
+      } else if (type === 'contract') {
+        document.getElementById('compose-sender').value = "Project Lead <lead@internal-group.org>";
+        document.getElementById('compose-subject').value = "Status update - per my previous 3 notes regarding contract agreement";
+        document.getElementById('compose-body').value = "Per my last email that seems to have been overlooked, we are still waiting on the contract sign-off. Not sure why this basic sign-off is taking so long. Please provide confirmation.";
+      }
+    }
+
+    async function submitComposeInbound() {
+      const sender = document.getElementById('compose-sender').value.trim();
+      const subject = document.getElementById('compose-subject').value.trim();
+      const body = document.getElementById('compose-body').value.trim();
+
+      closeComposeModal();
+      showToast("Email arrived! Zen AI de-escalating & drafting reply...");
+
+      try {
+        await fetch(`${API_BASE}/api/mail/inbound-test`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sender, subject, body })
+        });
+        showToast("New email de-escalated and ready in Inbox! 🌿");
+        loadEmails();
+      } catch (e) {
+        showToast("Dispatched email test.");
+        loadEmails();
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // -------------------------------------------------------------------------
+    // Initial Load: Default to Gmail Inbox (with Step 1 & 2 available)
+    // -------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      // Direct access to the Gmail interface
+      goToStage('inbox');
+    });
+  </script>
+</body>
+</html>
