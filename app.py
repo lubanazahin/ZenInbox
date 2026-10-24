@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -686,31 +686,10 @@ class DraftRequest(BaseModel):
     draft: str
 
 
-@app.on_event("startup")
-def startup():
-    try:
-        _init_db()
-        _log_event("SYSTEM_BOOT", "SUCCESS", "ZenInbox Enterprise Engine online with n8n orchestration")
-    except Exception as e:
-        log.warning("Startup database init skipped: %s", e)
-
-    try:
-        saved_user = _get_setting("imap_user")
-        saved_host = _get_setting("imap_host")
-        if saved_user:
-            state.user = saved_user
-            state.host = saved_host or "imap.gmail.com"
-            state.is_connected = True
-            _log_event("MAILBOX_RESTORED", "SUCCESS", f"Passwordless pipeline active for {saved_user}")
-    except Exception:
-        pass
-
-    if not IS_VERCEL:
-        try:
-            t = threading.Thread(target=_daemon_loop, daemon=True, name="zeninbox-poller")
-            t.start()
-        except Exception:
-            pass
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.png", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
 
 
 @app.get("/", response_class=HTMLResponse)
