@@ -41,13 +41,17 @@ logging.basicConfig(
 log = logging.getLogger("zeninbox")
 
 APP_DIR = Path(__file__).resolve().parent
-DB_PATH: str = os.getenv("ZENINBOX_DB", str(APP_DIR / "zen_inbox_v2.db"))
+IS_VERCEL = bool(os.getenv("VERCEL"))
+DEFAULT_DB = "/tmp/zen_inbox_v2.db" if IS_VERCEL else str(APP_DIR / "zen_inbox_v2.db")
+DB_PATH: str = os.getenv("ZENINBOX_DB", DEFAULT_DB)
 _POLL_INTERVAL = int(os.getenv("ZENINBOX_POLL_SECONDS", "30"))
 
 # ---------------------------------------------------------------------------
 # Database Datastore
 # ---------------------------------------------------------------------------
 def _get_db() -> sqlite3.Connection:
+    if not os.path.exists(DB_PATH):
+        _init_db()
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
@@ -675,13 +679,18 @@ def startup():
         state.is_connected = True
         _log_event("MAILBOX_RESTORED", "SUCCESS", f"Passwordless pipeline active for {saved_user}")
 
-    t = threading.Thread(target=_daemon_loop, daemon=True, name="zeninbox-poller")
-    t.start()
+    if not IS_VERCEL:
+        t = threading.Thread(target=_daemon_loop, daemon=True, name="zeninbox-poller")
+        t.start()
 
 
 @app.get("/", response_class=HTMLResponse)
 def get_root():
     ui_path = APP_DIR / "ui.html"
+    if not ui_path.exists():
+        ui_path = Path(__file__).resolve().parent / "ui.html"
+    if not ui_path.exists():
+        ui_path = Path.cwd() / "ui.html"
     if ui_path.exists():
         return HTMLResponse(content=ui_path.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>ZenInbox Server Active</h1>")
