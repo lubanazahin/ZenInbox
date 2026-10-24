@@ -21,6 +21,7 @@ import re
 import socket
 import logging
 import hashlib
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -42,23 +43,32 @@ log = logging.getLogger("zeninbox")
 
 APP_DIR = Path(__file__).resolve().parent
 IS_VERCEL = bool(os.getenv("VERCEL"))
-DEFAULT_DB = "/tmp/zen_inbox_v2.db" if IS_VERCEL else str(APP_DIR / "zen_inbox_v2.db")
+TMP_DIR = tempfile.gettempdir()
+DEFAULT_DB = str(Path(TMP_DIR) / "zen_inbox_v2.db") if IS_VERCEL else str(APP_DIR / "zen_inbox_v2.db")
 DB_PATH: str = os.getenv("ZENINBOX_DB", DEFAULT_DB)
 _POLL_INTERVAL = int(os.getenv("ZENINBOX_POLL_SECONDS", "30"))
 
 # ---------------------------------------------------------------------------
 # Database Datastore
 # ---------------------------------------------------------------------------
-def _get_db() -> sqlite3.Connection:
-    if not os.path.exists(DB_PATH):
-        _init_db()
-    conn = sqlite3.connect(DB_PATH, timeout=10.0)
-    conn.execute("PRAGMA journal_mode=WAL")
+_DB_INITIALIZED = False
+
+def _create_connection() -> sqlite3.Connection:
+    db_dir = os.path.dirname(os.path.abspath(DB_PATH))
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, timeout=15.0)
+    if not IS_VERCEL:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
     conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 def _init_db():
-    conn = _get_db()
+    global _DB_INITIALIZED
+    conn = _create_connection()
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -185,6 +195,16 @@ def _init_db():
         conn.commit()
 
     conn.close()
+    _DB_INITIALIZED = True
+
+def _get_db() -> sqlite3.Connection:
+    global _DB_INITIALIZED
+    if not _DB_INITIALIZED or not os.path.exists(DB_PATH):
+        try:
+            _init_db()
+        except Exception as e:
+            log.warning("Database init error: %s", e)
+    return _create_connection()
 
 def _log_event(event_type: str, event_status: str, details: str, payload: str = ""):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -668,20 +688,29 @@ class DraftRequest(BaseModel):
 
 @app.on_event("startup")
 def startup():
-    _init_db()
-    _log_event("SYSTEM_BOOT", "SUCCESS", "ZenInbox Enterprise Engine online with n8n orchestration")
+    try:
+        _init_db()
+        _log_event("SYSTEM_BOOT", "SUCCESS", "ZenInbox Enterprise Engine online with n8n orchestration")
+    except Exception as e:
+        log.warning("Startup database init skipped: %s", e)
 
-    saved_user = _get_setting("imap_user")
-    saved_host = _get_setting("imap_host")
-    if saved_user:
-        state.user = saved_user
-        state.host = saved_host or "imap.gmail.com"
-        state.is_connected = True
-        _log_event("MAILBOX_RESTORED", "SUCCESS", f"Passwordless pipeline active for {saved_user}")
+    try:
+        saved_user = _get_setting("imap_user")
+        saved_host = _get_setting("imap_host")
+        if saved_user:
+            state.user = saved_user
+            state.host = saved_host or "imap.gmail.com"
+            state.is_connected = True
+            _log_event("MAILBOX_RESTORED", "SUCCESS", f"Passwordless pipeline active for {saved_user}")
+    except Exception:
+        pass
 
     if not IS_VERCEL:
-        t = threading.Thread(target=_daemon_loop, daemon=True, name="zeninbox-poller")
-        t.start()
+        try:
+            t = threading.Thread(target=_daemon_loop, daemon=True, name="zeninbox-poller")
+            t.start()
+        except Exception:
+            pass
 
 
 @app.get("/", response_class=HTMLResponse)
